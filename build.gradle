@@ -173,5 +173,6 @@ publishing {
     }
     dependencies {
     	compile group: 'org.tensorflow', name: 'tensorflow-core-platform', version: '0.3.1'
+    	implementation 'org.python:jython-slim:2.7.2'
 	}
 }
