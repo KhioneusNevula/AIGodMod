@@ -5,9 +5,10 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.gm910.aigodmod.python.PythonUtils;
+import com.gm910.aigodmod.util.GMUtils;
 
 import net.minecraft.block.Block;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
@@ -44,7 +45,7 @@ public class AIGodMod {
 	private void setup(final FMLCommonSetupEvent event) {
 		// some preinit code
 		LOGGER.info("HELLO FROM PREINIT");
-		ResourceLocation pythonLoc = new ResourceLocation(Reference.MODID, "python_ai/house_network.py");
+		ResourceLocation pythonLoc = new ResourceLocation(Reference.MODID, "house_network.py");
 		/*
 		 * Properties props = new Properties();
 		 * 
@@ -56,7 +57,13 @@ public class AIGodMod {
 		 * 
 		 * PythonInterpreter.initialize(preprops, props, new String[0]);
 		 */
-		PythonUtils.execPythonFileFromResourceLocation(this.getClass(), pythonLoc);
+		// PythonUtils.execPythonFileFromResourceLocation(this.getClass(), pythonLoc);
+
+		CompoundNBT testNBT = GMUtils.loadNBTFile(GMUtils.getDataStream(this.getClass(),
+				new ResourceLocation("minecraft", "structures/village/desert/houses/desert_farm_1.nbt")));
+
+		System.out.println(testNBT);
+
 	}
 
 	private void doClientStuff(final FMLClientSetupEvent event) {

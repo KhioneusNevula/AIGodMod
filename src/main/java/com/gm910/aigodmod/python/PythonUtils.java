@@ -2,22 +2,51 @@ package com.gm910.aigodmod.python;
 
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import net.minecraft.crash.CrashReport;
+import net.minecraft.crash.ReportedException;
 import net.minecraft.util.ResourceLocation;
 
 public class PythonUtils {
 
+	/**
+	 * TODO generalize this to work with a jar file
+	 * 
+	 * @param caller
+	 * @param loc
+	 */
 	public static void execPythonFileFromResourceLocation(Class<?> caller, ResourceLocation loc) {
 
-		ProcessBuilder pb = new ProcessBuilder(
-				"C:\\Users\\borah\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
-				"C:\\Users\\borah\\Documents\\GitHub\\AIGodMod\\src\\main\\resources\\assets\\aigodmod\\"
-						+ loc.getPath().replace("/", "\\"));
+		List<String> pathlist = Arrays.asList(System.getenv("Path").split(";"));
+		List<String> pyPaths = pathlist.stream().filter((o) -> o.contains("Python")).collect(Collectors.toList());
+		String pyPath = pyPaths.stream().filter((o) -> !o.endsWith("Scripts\\") && !o.endsWith("Scripts/")).findAny()
+				.orElse(null);
+		if (pyPath == null) {
+			throw new ReportedException(CrashReport
+					.forThrowable(new IllegalStateException("No python paths found for " + pyPaths), pyPaths + ""));
+		}
+
+		String pyExePath = pyPath + "python.exe";
+
+		String runPath = System.getProperty("user.dir").replace("run", "")
+				+ "src\\main\\resources\\assets\\aigodmod\\python_ai\\" + loc.getPath().replace("/", "\\");
+
+		System.out.println("Preparing to run python program at " + runPath + " using " + pyExePath);
+
+		ProcessBuilder pb = new ProcessBuilder(pyExePath, runPath);
+
 		pb.redirectOutput(Redirect.INHERIT);
+		pb.redirectError(Redirect.INHERIT);
 		try {
+
 			Process p = pb.start();
+			System.out.println("Running program at " + runPath + " with process " + p);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new ReportedException(
+					CrashReport.forThrowable(new IllegalStateException("Cannot run " + loc + " with python"), ""));
 		}
 
 		/*
