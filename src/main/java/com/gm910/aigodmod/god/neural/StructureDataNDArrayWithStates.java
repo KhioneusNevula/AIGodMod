@@ -6,26 +6,21 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.gm910.aigodmod.main.Reference;
 import com.gm910.aigodmod.util.GMUtils;
-import com.google.common.collect.Maps;
-import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.material.MaterialColor;
-import net.minecraft.command.arguments.BlockStateParser;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.ReportedException;
 import net.minecraft.nbt.CompoundNBT;
@@ -34,23 +29,35 @@ import net.minecraft.nbt.INBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
+import net.minecraftforge.registries.ForgeRegistries;
 
 /**
  * This class converts a structure into a tensor. The tensor will have
- * dimensions as follows - Width - Height - Depth - DyeColor index or all 0 for
- * Air
+ * dimensions as follows - Width - Height - Depth - Block state index
  * 
  * @author borah
  *
  */
-public class StructureDataNDArray {
+public class StructureDataNDArrayWithStates {
 
-	private byte[][][][] dataArray;
+	private int[][][][] dataArray;
+
+	/**
+	 * The number of block types in the game to train on
+	 */
+	private static Integer numBlocks;
+	private static List<ResourceLocation> orderedBlocks;
+
+	private static List<BlockState> universalOrderedBlockStates;
+
+	/**
+	 * The number of block states
+	 */
+	private static int totalBlockStates;
 
 	/**
 	 * Size of the physical structures
@@ -58,70 +65,6 @@ public class StructureDataNDArray {
 	private static int[] spatialDimensions;
 
 	public static int BATCH_SIZE;
-
-	public static final Map<MaterialColor, Block> MATERIAL_TO_BLOCK = Util.make(Maps.newHashMap(), (map) -> {
-
-		map.put(MaterialColor.NONE, Blocks.WHITE_STAINED_GLASS);
-
-		map.put(MaterialColor.CLAY, Blocks.CLAY);
-		map.put(MaterialColor.COLOR_BLACK, Blocks.BLACK_WOOL);
-		map.put(MaterialColor.COLOR_BLUE, Blocks.BLUE_WOOL);
-		map.put(MaterialColor.COLOR_BROWN, Blocks.BROWN_WOOL);
-		map.put(MaterialColor.COLOR_CYAN, Blocks.CYAN_WOOL);
-		map.put(MaterialColor.COLOR_GRAY, Blocks.GRAY_WOOL);
-		map.put(MaterialColor.COLOR_GREEN, Blocks.GREEN_WOOL);
-		map.put(MaterialColor.COLOR_LIGHT_BLUE, Blocks.LIGHT_BLUE_WOOL);
-		map.put(MaterialColor.COLOR_LIGHT_GRAY, Blocks.LIGHT_GRAY_WOOL);
-		map.put(MaterialColor.COLOR_LIGHT_GREEN, Blocks.LIME_WOOL);
-		map.put(MaterialColor.COLOR_MAGENTA, Blocks.MAGENTA_WOOL);
-		map.put(MaterialColor.COLOR_ORANGE, Blocks.ORANGE_WOOL);
-		map.put(MaterialColor.COLOR_PINK, Blocks.PINK_WOOL);
-		map.put(MaterialColor.COLOR_PURPLE, Blocks.PURPLE_WOOL);
-		map.put(MaterialColor.COLOR_RED, Blocks.RED_WOOL);
-		map.put(MaterialColor.COLOR_YELLOW, Blocks.YELLOW_WOOL);
-		map.put(MaterialColor.CRIMSON_HYPHAE, Blocks.RED_TERRACOTTA);
-		map.put(MaterialColor.CRIMSON_NYLIUM, Blocks.RED_WOOL);
-		map.put(MaterialColor.CRIMSON_STEM, Blocks.MAGENTA_TERRACOTTA);
-		map.put(MaterialColor.DIAMOND, Blocks.DIAMOND_BLOCK);
-		map.put(MaterialColor.DIRT, Blocks.DIRT);
-		map.put(MaterialColor.EMERALD, Blocks.EMERALD_BLOCK);
-		map.put(MaterialColor.FIRE, Blocks.RED_WOOL);
-		map.put(MaterialColor.GOLD, Blocks.GOLD_BLOCK);
-		map.put(MaterialColor.GRASS, Blocks.GREEN_TERRACOTTA);
-		map.put(MaterialColor.ICE, Blocks.PACKED_ICE);
-		map.put(MaterialColor.LAPIS, Blocks.LAPIS_BLOCK);
-		map.put(MaterialColor.METAL, Blocks.LIGHT_GRAY_WOOL);
-		map.put(MaterialColor.NETHER, Blocks.RED_TERRACOTTA);
-		map.put(MaterialColor.PLANT, Blocks.OAK_LEAVES);
-		map.put(MaterialColor.PODZOL, Blocks.ORANGE_TERRACOTTA);
-		map.put(MaterialColor.QUARTZ, Blocks.WHITE_WOOL);
-		map.put(MaterialColor.SAND, Blocks.WHITE_TERRACOTTA);
-		map.put(MaterialColor.SNOW, Blocks.WHITE_WOOL);
-		map.put(MaterialColor.STONE, Blocks.STONE);
-		map.put(MaterialColor.TERRACOTTA_BLACK, Blocks.BLACK_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_BLUE, Blocks.BLUE_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_BROWN, Blocks.BROWN_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_CYAN, Blocks.CYAN_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_GRAY, Blocks.GRAY_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_GREEN, Blocks.GREEN_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_LIGHT_BLUE, Blocks.LIGHT_BLUE_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_LIGHT_GRAY, Blocks.LIGHT_GRAY_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_LIGHT_GREEN, Blocks.LIME_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_MAGENTA, Blocks.MAGENTA_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_ORANGE, Blocks.ORANGE_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_PINK, Blocks.PINK_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_PURPLE, Blocks.PURPLE_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_RED, Blocks.RED_TERRACOTTA);
-		map.put(MaterialColor.TERRACOTTA_YELLOW, Blocks.YELLOW_TERRACOTTA);
-		map.put(MaterialColor.WARPED_HYPHAE, Blocks.PURPLE_TERRACOTTA);
-		map.put(MaterialColor.WARPED_NYLIUM, Blocks.CYAN_CONCRETE);
-		map.put(MaterialColor.WARPED_STEM, Blocks.CYAN_CONCRETE);
-		map.put(MaterialColor.WARPED_WART_BLOCK, Blocks.WARPED_WART_BLOCK);
-		map.put(MaterialColor.WATER, Blocks.WATER);
-		map.put(MaterialColor.WOOD, Blocks.BROWN_CONCRETE);
-		map.put(MaterialColor.WOOL, Blocks.WHITE_WOOL);
-
-	});
 
 	/**
 	 * House files to train from
@@ -133,9 +76,9 @@ public class StructureDataNDArray {
 	 */
 	private static int[] tensorDimensions;
 
-	public static final Path trainingDatasetFile = Path.of("config", "trainingdataset.txt");
+	public static final Path outputFile = Path.of("config", "javaprogramoutput.txt");
 
-	public StructureDataNDArray() {
+	public StructureDataNDArrayWithStates() {
 		initBlockStateList();
 	}
 
@@ -154,7 +97,7 @@ public class StructureDataNDArray {
 	 * 
 	 * @param data
 	 */
-	public void init(byte[][][][] data) {
+	public void init(int[][][][] data) {
 
 		initBlockStateList();
 
@@ -172,7 +115,7 @@ public class StructureDataNDArray {
 	 * @param data
 	 * @return
 	 */
-	public static int[] getDimensionsOf(byte[][][][] data) {
+	public static int[] getDimensionsOf(int[][][][] data) {
 		int[] dims = { data.length, data[0].length, data[0][0].length, data[0][0][0].length };
 		return dims;
 	}
@@ -180,14 +123,11 @@ public class StructureDataNDArray {
 	/**
 	 * Creates array with the correct dimensions as given above
 	 */
-	public static byte[][][][] createArrayWithCorrectDimensions() {
-		if (tensorDimensions == null)
+	public static int[][][][] createArrayWithCorrectDimensions() {
+		if (numBlocks == null)
 			initBlockStateList();
-		return new byte[spatialDimensions[0]][spatialDimensions[1]][spatialDimensions[2]][numColors()];
-	}
-
-	public static int numColors() {
-		return MaterialColor.MATERIAL_COLORS.length;
+		return new int[spatialDimensions[0]][spatialDimensions[1]][spatialDimensions[2]][universalOrderedBlockStates
+				.size()];
 	}
 
 	/**
@@ -214,6 +154,7 @@ public class StructureDataNDArray {
 
 					BlockPos pos = new BlockPos(x, y, z);
 					BlockState state = world.getBlockState(pos);
+					Block block = state.getBlock();
 					ResourceLocation regName = state.getBlock().getRegistryName();
 					if (!isCompatible(regName)) {
 						state = Blocks.AIR.defaultBlockState();
@@ -284,23 +225,6 @@ public class StructureDataNDArray {
 				state = Blocks.AIR.defaultBlockState();
 			}
 
-			if (state.getBlock() == Blocks.JIGSAW) {
-				String finalState = tag.getCompound("nbt").getString("final_state");
-				BlockStateParser parser = new BlockStateParser(new StringReader(finalState), true);
-				try {
-					parser.parse(false);
-					BlockState state2 = parser.getState();
-					if (state2 != null) {
-						state = state2;
-					} else {
-						System.err.println("Error while parsing blockstate " + finalState + " from jigsaw block");
-
-					}
-				} catch (CommandSyntaxException commandsyntaxexception) {
-					System.err.println("Error while parsing blockstate " + finalState + " from jigsaw block");
-				}
-			}
-
 			int x = pos.getX() + offset[0];
 			int y = pos.getY() + offset[1];
 			int z = pos.getZ() + offset[2];
@@ -353,10 +277,12 @@ public class StructureDataNDArray {
 		for (int x = 0; x < dataArray.length; x++) {
 			for (int y = 0; y < dataArray[0].length; y++) {
 				for (int z = 0; z < dataArray[0][0].length; z++) {
-					byte[] bsarray = dataArray[x][y][z];
-					BlockState block = decode(bsarray);
+					int[] bsarray = dataArray[x][y][z];
+					BlockState state = decode(bsarray);
+					if (!state.isAir())
+						System.out.println(state);
 					BlockPos pos = (new BlockPos(minX + x, minY + y, minZ + z));
-					world.setBlock(pos, block, 2);
+					world.setBlock(pos, state, 2);
 				}
 			}
 		}
@@ -388,52 +314,27 @@ public class StructureDataNDArray {
 	/**
 	 * Helper method to decode a block from a data array
 	 */
-	public static BlockState decode(byte[] vec) {
-		if (tensorDimensions == null)
+	public static BlockState decode(int[] vec) {
+		if (numBlocks == null)
 			initBlockStateList();
 
-		if (vec.length != numColors())
-			throw new IllegalArgumentException("Given vector is missized with dimensions of " + vec.length
-					+ " when it should have dimensions of " + numColors());
-
-		MaterialColor color = null;
+		if (vec.length != totalBlockStates)
+			throw new IllegalArgumentException("Given vector is too short with dimensions of " + vec.length
+					+ " when it should have dimensions of " + totalBlockStates);
+		BlockState state = null;
 		for (int i = 0; i < vec.length; i++) {
 			if (vec[i] != 0) {
-				color = MaterialColor.MATERIAL_COLORS[i];
+				state = universalOrderedBlockStates.get(i);
 			}
 		}
-		if (color == null) {
-			return Blocks.AIR.defaultBlockState();
-		}
 
-		return MATERIAL_TO_BLOCK.get(color).defaultBlockState();
+		return state;
 	}
 
-	/**
-	 * Returns null if the
-	 * 
-	 * @param color
-	 * @return
-	 */
-	public static Block materialToBlock(MaterialColor color) {
-
-		return MATERIAL_TO_BLOCK.get(color);
-	}
-
-	public static byte[] encode(BlockState state) {
-		byte[] vec = new byte[numColors()];
-		if (state.isAir())
-			return vec;
-		vec[getOrdinal(state.getMaterial().getColor())] = 1;
+	public static int[] encode(BlockState state) {
+		int[] vec = new int[totalBlockStates];
+		vec[universalOrderedBlockStates.indexOf(state)] = 1;
 		return vec;
-	}
-
-	public static int getOrdinal(MaterialColor color) {
-		for (int i = 0; i < MaterialColor.MATERIAL_COLORS.length; i++) {
-			if (MaterialColor.MATERIAL_COLORS[i] == color)
-				return i;
-		}
-		return -1;
 	}
 
 	/**
@@ -443,11 +344,11 @@ public class StructureDataNDArray {
 	 * @param input
 	 * @return
 	 */
-	private static byte[][][][] fillWithAir(byte[][][][] input) {
+	private static int[][][][] fillWithAir(int[][][][] input) {
 		for (int x = 0; x < input.length; x++) {
 			for (int y = 0; y < input[0].length; y++) {
 				for (int z = 0; z < input[0][0].length; z++) {
-					byte[] bsarray = input[x][y][z];
+					int[] bsarray = input[x][y][z];
 					boolean isEmpty = isArrayZeroes(bsarray);
 					if (isEmpty) {
 						input[x][y][z] = encode(Blocks.AIR.defaultBlockState());
@@ -465,9 +366,9 @@ public class StructureDataNDArray {
 	 * @param toCheck
 	 * @return
 	 */
-	private static boolean isArrayZeroes(byte[] toCheck) {
+	private static boolean isArrayZeroes(int[] toCheck) {
 
-		for (byte a : toCheck) {
+		for (int a : toCheck) {
 			if (a != 0)
 				return false;
 		}
@@ -481,7 +382,7 @@ public class StructureDataNDArray {
 	 * @param toCheck
 	 * @return
 	 */
-	private static boolean doesArrayHaveMultipleOnes(byte[] toCheck) {
+	private static boolean doesArrayHaveMultipleOnes(int[] toCheck) {
 		boolean foundOne = false;
 		for (int val : toCheck) {
 			if (val != 0) {
@@ -499,21 +400,24 @@ public class StructureDataNDArray {
 	 * Returns a number for each problem, or 0 if no problems. Problems are: <br>
 	 * - is null (1)<br>
 	 * - has the wrong dimensions (2)<br>
-	 * - array has multiple non-zero values (3) <br>
+	 * - array has all zeroes (3) <br>
+	 * - array has multiple non-zero values (4) <br>
 	 * 
 	 * @param data
 	 * @return
 	 */
-	private static int isDataValid(byte[][][][] data) {
+	private static int isDataValid(int[][][][] data) {
 		if (data == null)
 			return 1;
 		if (!Arrays.equals(getDimensionsOf(data), getTensorDimensions()))
 			return 2;
-		for (byte[][][] datX : data) {
-			for (byte[][] datY : datX) {
-				for (byte[] datZ : datY) {
-					if (doesArrayHaveMultipleOnes(datZ))
+		for (int[][][] datX : data) {
+			for (int[][] datY : datX) {
+				for (int[] datZ : datY) {
+					if (isArrayZeroes(datZ))
 						return 3;
+					else if (doesArrayHaveMultipleOnes(datZ))
+						return 4;
 				}
 			}
 		}
@@ -527,14 +431,15 @@ public class StructureDataNDArray {
 	 * @param validityCode
 	 * @return
 	 */
-	private static String writeDataInvalidityMessage(int validityCode, byte[][][][] data) {
+	private static String writeDataInvalidityMessage(int validityCode, int[][][][] data) {
 		switch (validityCode) {
 		case 1:
 			return "Data is null";
 		case 2:
 			return "Data has the wrong dimensions; dimensions are " + Arrays.toString(getDimensionsOf(data));
-
 		case 3:
+			return "A data point has all zeroes";
+		case 4:
 			return "A data point has multiple non-zero values";
 		default:
 			return "Fine";
@@ -546,10 +451,19 @@ public class StructureDataNDArray {
 	 * 
 	 * @return
 	 */
-	public byte[][][][] getDataArray() {
+	public int[][][][] getDataArray() {
 		if (!isInitialized())
 			throw new IllegalStateException("Cannot access data array before initialized");
 		return dataArray;
+	}
+
+	/**
+	 * Returns the actual index in the universal list of this block state
+	 */
+	public static int getUniversalIndexOfBlockState(BlockState state) {
+		if (universalOrderedBlockStates == null || universalOrderedBlockStates.isEmpty())
+			initBlockStateList();
+		return universalOrderedBlockStates.indexOf(state);
 	}
 
 	/**
@@ -559,9 +473,32 @@ public class StructureDataNDArray {
 
 		initValuesFromSettings();
 
-		System.out.println("Initializing some values for AI...");
+		System.out.println("Initializing block state list for AI...");
 
-		tensorDimensions = new int[] { spatialDimensions[0], spatialDimensions[1], spatialDimensions[2], numColors() };
+		if (numBlocks != null)
+			return;
+		orderedBlocks = new ArrayList<>(ForgeRegistries.BLOCKS.getKeys());
+		orderedBlocks.removeIf(((Predicate<ResourceLocation>) (StructureDataNDArrayWithStates::isCompatible)).negate());
+		orderedBlocks.sort(Comparator.naturalOrder());
+		numBlocks = orderedBlocks.size();
+
+		universalOrderedBlockStates = new ArrayList<>();
+
+		for (ResourceLocation key : orderedBlocks) {
+			Block block = ForgeRegistries.BLOCKS.getValue(key);
+			List<BlockState> stateList = new ArrayList<>(block.getStateDefinition().getPossibleStates());
+			stateList.sort((c1, c2) -> NBTUtil.writeBlockState(c1).getAsString()
+					.compareTo(NBTUtil.writeBlockState(c2).getAsString()));
+			universalOrderedBlockStates.addAll(stateList);
+
+		}
+		totalBlockStates = universalOrderedBlockStates.size();
+		tensorDimensions = new int[] { spatialDimensions[0], spatialDimensions[1], spatialDimensions[2],
+				universalOrderedBlockStates.size() };
+		System.out.println("Finished initializing block states for AI!");
+		System.out.println("Number of block states: " + totalBlockStates);
+		System.out
+				.println("First 10 stored states: " + StructureDataNDArrayWithStates.universalOrderedBlockStates.subList(0, 10));
 	}
 
 	/**
@@ -574,7 +511,7 @@ public class StructureDataNDArray {
 	public static boolean isCompatible(ResourceLocation rl) {
 		return (rl.getNamespace().equals("minecraft") || rl.getNamespace().equals(Reference.MODID))
 				&& !rl.equals(Blocks.STRUCTURE_VOID.getRegistryName())
-				&& !rl.equals(Blocks.STRUCTURE_BLOCK.getRegistryName());
+				&& !rl.equals(Blocks.STRUCTURE_BLOCK.getRegistryName()) && !rl.equals(Blocks.JIGSAW.getRegistryName());
 	}
 
 	/**
@@ -592,6 +529,18 @@ public class StructureDataNDArray {
 		if (tensorDimensions == null)
 			initBlockStateList();
 		return tensorDimensions;
+	}
+
+	public static int getNumBlocks() {
+		if (numBlocks == null)
+			initBlockStateList();
+		return numBlocks;
+	}
+
+	public static int getNumberOfBlockStates() {
+		if (numBlocks == null)
+			initBlockStateList();
+		return totalBlockStates;
 	}
 
 	/**
@@ -667,7 +616,7 @@ public class StructureDataNDArray {
 		initBlockStateList();
 		String[] folders = { "desert", "plains", "savanna", "snowy", "taiga" };
 
-		StructureDataNDArray data = new StructureDataNDArray();
+		StructureDataNDArrayWithStates data = new StructureDataNDArrayWithStates();
 
 		for (String folder : folders) {
 			String houses = "structures/village/" + folder + "/houses";
@@ -689,7 +638,7 @@ public class StructureDataNDArray {
 					data.wipe();
 					System.gc();
 					CompoundNBT nbt = CompressedStreamTools
-							.readCompressed(GMUtils.getDataStream(StructureDataNDArray.class, newLoc));
+							.readCompressed(GMUtils.getDataStream(StructureDataNDArrayWithStates.class, newLoc));
 
 					int[] size = getSize(nbt);
 
@@ -730,13 +679,23 @@ public class StructureDataNDArray {
 
 	/**
 	 * Writes data to javaprogramoutput file; Format rules: <br>
-	 * semicolon-newline divides pieces of data<br>
+	 * newline divides pieces of data<br>
 	 * 
 	 * @param name
 	 */
 	public void writeDataToFile(boolean append) {
-		try {
-			Files.writeString(trainingDatasetFile, Arrays.deepToString(dataArray) + ";\n", StandardOpenOption.APPEND);
+		try (BufferedReader reader = Files.newBufferedReader(outputFile)) {
+			String contents = "";
+			if (append) {
+				for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+					contents += line;
+				}
+				if (!contents.endsWith("\n"))
+					contents += "\n";
+			}
+			try (BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
+				writer.write(contents + Arrays.deepToString(dataArray));
+			}
 		} catch (IOException e) {
 			throw new ReportedException(CrashReport.forThrowable(e, ""));
 		}
@@ -746,7 +705,7 @@ public class StructureDataNDArray {
 	 * TODO generalize this to work with jar file Writes to output settings file
 	 */
 	public static void setContentsOfOutputFile(String contents) {
-		try (BufferedWriter writer = Files.newBufferedWriter(trainingDatasetFile)) {
+		try (BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
 			writer.write(contents);
 		} catch (IOException e) {
 			throw new ReportedException(CrashReport.forThrowable(e, "error while writing to java output file for AI"));

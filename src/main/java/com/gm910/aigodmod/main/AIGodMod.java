@@ -68,13 +68,13 @@ public class AIGodMod {
 		// PythonUtils.execPythonFileFromResourceLocation(this.getClass(), pythonLoc);
 
 		CompoundNBT testNBT = GMUtils.loadNBTFile(GMUtils.getDataStream(this.getClass(),
-				new ResourceLocation("minecraft", "structures/village/desert/houses/desert_medium_house_1.nbt")));
+				new ResourceLocation("minecraft", "structures/village/savanna/houses/savanna_library_1.nbt")));
 
 		System.out.println(testNBT);
 
 		test = new StructureDataNDArray();
 		test.init(testNBT);
-		int[][][][] datar = test.getDataArray();
+		byte[][][][] datar = test.getDataArray();
 		System.out.println("Data shape: " + Arrays.toString(StructureDataNDArray.getDimensionsOf(datar)));
 
 		StructureDataNDArray.writeAllHousesToJavaOutput();
