@@ -1,5 +1,9 @@
-A mod utilizing AI to create a sort of Minecraftian god. This project is mostly an exploration of AI; although it is intended to be a playable mod as well with survival utility and some kind of progression.
+A mod utilizing AI to do stuff in Minecraft. This project is mostly an exploration of AI; although it is hopefully going to be a playable mod as well with survival utility and some kind of progression in the future. (Not sure what my plans would be for that, though)
 
+- current plan: Create a House-GAN that makes Minecraft houses using a Generative Adversarial Network
+- Future possible plans:
+- - Perhaps make an RL algorithm of some kind that assists the player
+- - Model GAN to generate custom creatures
 
 
 
