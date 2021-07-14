@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
+
 import com.gm910.aigodmod.main.Reference;
 import com.gm910.aigodmod.util.GMUtils;
 import com.google.common.collect.Maps;
@@ -61,8 +64,9 @@ public class StructureDataNDArray {
 
 	public static final Map<MaterialColor, Block> MATERIAL_TO_BLOCK = Util.make(Maps.newHashMap(), (map) -> {
 
-		map.put(MaterialColor.NONE, Blocks.WHITE_STAINED_GLASS);
+		map.put(null, Blocks.AIR);
 
+		map.put(MaterialColor.NONE, Blocks.WHITE_STAINED_GLASS);
 		map.put(MaterialColor.CLAY, Blocks.CLAY);
 		map.put(MaterialColor.COLOR_BLACK, Blocks.BLACK_WOOL);
 		map.put(MaterialColor.COLOR_BLUE, Blocks.BLUE_WOOL);
@@ -98,6 +102,7 @@ public class StructureDataNDArray {
 		map.put(MaterialColor.SAND, Blocks.WHITE_TERRACOTTA);
 		map.put(MaterialColor.SNOW, Blocks.WHITE_WOOL);
 		map.put(MaterialColor.STONE, Blocks.STONE);
+		map.put(MaterialColor.TERRACOTTA_WHITE, Blocks.WHITE_TERRACOTTA);
 		map.put(MaterialColor.TERRACOTTA_BLACK, Blocks.BLACK_TERRACOTTA);
 		map.put(MaterialColor.TERRACOTTA_BLUE, Blocks.BLUE_TERRACOTTA);
 		map.put(MaterialColor.TERRACOTTA_BROWN, Blocks.BROWN_TERRACOTTA);
@@ -149,6 +154,28 @@ public class StructureDataNDArray {
 	}
 
 	/**
+	 * Assumption: data is an INDArray of doubles/floats <br>
+	 * Converts the given INDArray to an appropriate byte array for a structure by
+	 * argMaxing the array
+	 * 
+	 * @param data
+	 */
+	public static byte[][][][] convertToUsable(INDArray data) {
+		INDArray maxed = data.argMax(1);
+		System.out.println(Arrays.toString(maxed.shape()));
+		System.out.println(maxed);
+		byte[][][][] use = createArrayWithCorrectDimensions();
+		for (int x = 0; x < maxed.shape()[1]; x++) {
+			for (int y = 0; y < maxed.shape()[2]; y++) {
+				for (int z = 0; z < maxed.shape()[3]; z++) {
+					use[x][y][z][maxed.getInt(0, x, y, z)] = 1;
+				}
+			}
+		}
+		return use;
+	}
+
+	/**
 	 * Initializes this to the given array; uses the array itself so please don't
 	 * change it!
 	 * 
@@ -183,11 +210,11 @@ public class StructureDataNDArray {
 	public static byte[][][][] createArrayWithCorrectDimensions() {
 		if (tensorDimensions == null)
 			initBlockStateList();
-		return new byte[spatialDimensions[0]][spatialDimensions[1]][spatialDimensions[2]][numColors()];
+		return new byte[spatialDimensions[0]][spatialDimensions[1]][spatialDimensions[2]][numArraySlots()];
 	}
 
-	public static int numColors() {
-		return MaterialColor.MATERIAL_COLORS.length;
+	public static int numArraySlots() {
+		return MaterialColor.MATERIAL_COLORS.length + 1;
 	}
 
 	/**
@@ -356,6 +383,8 @@ public class StructureDataNDArray {
 					byte[] bsarray = dataArray[x][y][z];
 					BlockState block = decode(bsarray);
 					BlockPos pos = (new BlockPos(minX + x, minY + y, minZ + z));
+					if (!World.isInWorldBounds(pos))
+						continue;
 					world.setBlock(pos, block, 2);
 				}
 			}
@@ -392,12 +421,12 @@ public class StructureDataNDArray {
 		if (tensorDimensions == null)
 			initBlockStateList();
 
-		if (vec.length != numColors())
+		if (vec.length != numArraySlots())
 			throw new IllegalArgumentException("Given vector is missized with dimensions of " + vec.length
-					+ " when it should have dimensions of " + numColors());
+					+ " when it should have dimensions of " + numArraySlots());
 
 		MaterialColor color = null;
-		for (int i = 0; i < vec.length; i++) {
+		for (int i = 0; i < MaterialColor.MATERIAL_COLORS.length; i++) {
 			if (vec[i] != 0) {
 				color = MaterialColor.MATERIAL_COLORS[i];
 			}
@@ -421,10 +450,11 @@ public class StructureDataNDArray {
 	}
 
 	public static byte[] encode(BlockState state) {
-		byte[] vec = new byte[numColors()];
+		byte[] vec = new byte[numArraySlots()];
+		int ord = getOrdinal(state.getMaterial().getColor());
 		if (state.isAir())
-			return vec;
-		vec[getOrdinal(state.getMaterial().getColor())] = 1;
+			ord = numArraySlots() - 1;
+		vec[ord] = 1;
 		return vec;
 	}
 
@@ -561,7 +591,8 @@ public class StructureDataNDArray {
 
 		System.out.println("Initializing some values for AI...");
 
-		tensorDimensions = new int[] { spatialDimensions[0], spatialDimensions[1], spatialDimensions[2], numColors() };
+		tensorDimensions = new int[] { spatialDimensions[0], spatialDimensions[1], spatialDimensions[2],
+				numArraySlots() };
 	}
 
 	/**
@@ -751,6 +782,10 @@ public class StructureDataNDArray {
 		} catch (IOException e) {
 			throw new ReportedException(CrashReport.forThrowable(e, "error while writing to java output file for AI"));
 		}
+	}
+
+	public String toString() {
+		return this.getClass().getSimpleName() + Nd4j.createFromArray(dataArray);
 	}
 
 }

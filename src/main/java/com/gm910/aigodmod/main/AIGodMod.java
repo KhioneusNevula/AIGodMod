@@ -5,7 +5,12 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.deeplearning4j.nn.api.Layer.TrainingMode;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.DefaultRandom;
 
+import com.gm910.aigodmod.god.neural.HouseAI;
 import com.gm910.aigodmod.god.neural.StructureDataNDArray;
 import com.gm910.aigodmod.util.GMUtils;
 
@@ -35,6 +40,8 @@ public class AIGodMod {
 	private static final Logger LOGGER = LogManager.getLogger();
 
 	private StructureDataNDArray test;
+
+	private MultiLayerNetwork network;
 
 	public AIGodMod() {
 		// Register the setup method for modloading
@@ -77,7 +84,10 @@ public class AIGodMod {
 		byte[][][][] datar = test.getDataArray();
 		System.out.println("Data shape: " + Arrays.toString(StructureDataNDArray.getDimensionsOf(datar)));
 
-		StructureDataNDArray.writeAllHousesToJavaOutput();
+		// StructureDataNDArray.writeAllHousesToJavaOutput();
+
+		network = (new HouseAI()).buildGeneratorModel();
+		System.out.println(network.summary());
 
 	}
 
@@ -119,10 +129,29 @@ public class AIGodMod {
 			return;
 		if (!(event.getEntity() instanceof PlayerEntity))
 			return;
-		if (event.getEntity().tickCount != 10)
+		if (event.getEntity().tickCount % 200 != 0)
 			return;
+
+		if (true)
+			return;
+
+		try (org.nd4j.linalg.api.rng.Random rand1 = (new DefaultRandom())) {
+			INDArray inp = rand1.nextDouble(new int[] { 1, 100 });
+			System.out.println(inp);
+			network.setInput(inp);
+			INDArray out = network.activate(TrainingMode.TEST);
+			System.out.println(Arrays.toString(out.shape()));
+			test = new StructureDataNDArray();
+			test.init(StructureDataNDArray.convertToUsable(out));
+			System.out.println(StructureDataNDArray.getDimensionsOf(test.getDataArray()));
+
+		} catch (Exception e) {
+			throw new RuntimeException("Issues building keras model", e);
+		}
+
 		ServerWorld world = (ServerWorld) event.getEntity().level;
-		test.placeInWorld(world, world.getRandomPlayer().blockPosition().above(40));
+		test.placeInWorld(world, world.getRandomPlayer().blockPosition().above(10));
+		System.out.println(Arrays.toString(StructureDataNDArray.getDimensionsOf(test.getDataArray())));
 	}
 
 	// You can use EventBusSubscriber to automatically subscribe events on the
