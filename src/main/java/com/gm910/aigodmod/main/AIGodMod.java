@@ -84,7 +84,7 @@ public class AIGodMod {
 		byte[][][][] datar = test.getDataArray();
 		System.out.println("Data shape: " + Arrays.toString(StructureDataNDArray.getDimensionsOf(datar)));
 
-		// StructureDataNDArray.writeAllHousesToJavaOutput();
+		StructureDataNDArray.writeAllHousesToJavaOutput();
 
 		network = (new HouseAI()).buildGeneratorModel();
 		System.out.println(network.summary());

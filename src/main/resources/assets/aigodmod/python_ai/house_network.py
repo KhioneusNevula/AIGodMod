@@ -112,11 +112,13 @@ def make_generator_model():
 
 generator = make_generator_model()
 noise = tf.random.normal([1, noise_dim])
+
+
+
 with open(settingspath + "gen_model.json", "w") as json_file:
     json_file.write(generator.to_json())
 generator.save_weights(settingspath + "gen_model_weights.h5", save_format="h5")
 generated_image=generator(noise, training=False)
-print(generated_image)
 
 
 outputfile.close()
