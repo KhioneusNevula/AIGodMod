@@ -1,5 +1,7 @@
 package com.gm910.aigodmod.god.neural;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -16,6 +18,10 @@ import org.deeplearning4j.nn.conf.layers.Deconvolution3D;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.DropoutLayer;
 import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToCnn3DPreProcessor;
+import org.deeplearning4j.nn.modelimport.keras.KerasLayer;
+import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
+import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
+import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
 import org.deeplearning4j.nn.modelimport.keras.layers.core.KerasFlatten;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.nd4j.linalg.activations.Activation;
@@ -135,6 +141,14 @@ public class HouseAI {
 		} catch (Exception e) {
 			throw new RuntimeException("Error creating AI model", e);
 		}
+	}
+
+	public static MultiLayerNetwork importKerasModel(InputStream fileStream)
+			throws IOException, InvalidKerasConfigurationException, UnsupportedKerasConfigurationException {
+
+		KerasLayer.registerCustomLayer("Conv3DTranspose", Deconvolution3DKerasLayer.class);
+		return KerasModelImport.importKerasSequentialModelAndWeights(fileStream);
+
 	}
 
 	public MultiLayerNetwork buildDiscriminatorModel() {

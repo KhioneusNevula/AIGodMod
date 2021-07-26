@@ -18,6 +18,7 @@ import tensorflow as tf
 checkpoint_dir = './training_checkpoints'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
+# train_file = open("C:\\Users\\borah\\Desktop\\trainingdataset.txt", 'r')
 
 
 
@@ -86,7 +87,7 @@ def make_discriminator_model():
 def make_generator_model():
     model = tf.keras.Sequential()
     model.add(layers.Dense(5*5*5*256, use_bias=False, input_shape=(noise_dim,)))
-    model.add(layers.BatchNormalization())
+    #model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(layers.Reshape((5, 5, 5, 256)))
@@ -95,12 +96,12 @@ def make_generator_model():
 
     model.add(layers.Conv3DTranspose(128, (5, 5, 5), strides=(1, 1, 1), padding='same', use_bias=False))
     assert model.output_shape == (None, 5, 5, 5, 128)
-    model.add(layers.BatchNormalization())
+    #model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(layers.Conv3DTranspose(64, (5, 5, 5), strides=(3, 3, 3), padding='same', use_bias=False))
     assert model.output_shape == (None, 15, 15, 15, 64)
-    model.add(layers.BatchNormalization())
+    #model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(layers.Conv3DTranspose(64, (5, 5, 5), strides=(2, 2, 2), padding='same', use_bias=False, activation='tanh'))
@@ -115,9 +116,7 @@ noise = tf.random.normal([1, noise_dim])
 
 
 
-with open(settingspath + "gen_model.json", "w") as json_file:
-    json_file.write(generator.to_json())
-generator.save_weights(settingspath + "gen_model_weights.h5", save_format="h5")
+generator.save(settingspath + "gen_model.h5", save_format="h5")
 generated_image=generator(noise, training=False)
 
 
