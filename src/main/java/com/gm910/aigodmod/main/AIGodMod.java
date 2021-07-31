@@ -1,20 +1,15 @@
 package com.gm910.aigodmod.main;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.deeplearning4j.nn.api.Layer.TrainingMode;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.DefaultRandom;
 
-import com.gm910.aigodmod.god.neural.HouseAI;
 import com.gm910.aigodmod.god.neural.StructureDataNDArray;
 import com.gm910.aigodmod.util.GMUtils;
 
@@ -89,16 +84,18 @@ public class AIGodMod {
 		byte[][][][] datar = test.getDataArray();
 		System.out.println("Data shape: " + Arrays.toString(StructureDataNDArray.getDimensionsOf(datar)));
 
-		// StructureDataNDArray.writeAllHousesToJavaOutput();
+		StructureDataNDArray.writeAllHousesToJavaOutput();
 
 		// network = (new HouseAI()).buildGeneratorModel();
-		ResourceLocation modeLoc = new ResourceLocation(Reference.MODID, "python_ai/gen_model.h5");
-		try (InputStream modelStream = GMUtils.getAssetStream(AIGodMod.class, modeLoc)) {
-			network = HouseAI.importKerasModel(modelStream);
-		} catch (IOException | InvalidKerasConfigurationException | UnsupportedKerasConfigurationException e) {
-			throw new RuntimeException("Issues importing keras model at " + modeLoc);
-		}
-		System.out.println(network.summary());
+		/*
+		 * ResourceLocation modeLoc = new ResourceLocation(Reference.MODID,
+		 * "python_ai/gen_model.h5"); try (InputStream modelStream =
+		 * GMUtils.getAssetStream(AIGodMod.class, modeLoc)) { network =
+		 * HouseAI.importKerasModel(modelStream); } catch (IOException |
+		 * InvalidKerasConfigurationException | UnsupportedKerasConfigurationException
+		 * e) { throw new RuntimeException("Issues importing keras model at " +
+		 * modeLoc); } System.out.println(network.summary());
+		 */
 
 	}
 

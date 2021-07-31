@@ -138,7 +138,7 @@ public class StructureDataNDArray {
 	 */
 	private static int[] tensorDimensions;
 
-	public static final Path trainingDatasetFile = Path.of("config", "trainingdataset.txt");
+	public static final Path trainingDatasetFile = Path.of("C:/Users/borah/Desktop/trainingdataset.txt");
 
 	public StructureDataNDArray() {
 		initBlockStateList();
@@ -767,6 +767,7 @@ public class StructureDataNDArray {
 	 */
 	public void writeDataToFile(boolean append) {
 		try {
+
 			Files.writeString(trainingDatasetFile, Arrays.deepToString(dataArray) + ";\n", StandardOpenOption.APPEND);
 		} catch (IOException e) {
 			throw new ReportedException(CrashReport.forThrowable(e, ""));
