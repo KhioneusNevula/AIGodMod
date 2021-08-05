@@ -5,6 +5,10 @@ A mod utilizing AI to do stuff in Minecraft. This project is mostly an explorati
 - - Perhaps make an RL algorithm of some kind that assists the player
 - - Model GAN to generate custom creatures
 
+##Issues
+- Java python integration is not fully implemented
+- GAN model, after training on 75 structures, still produces pretty indefinite results
+
 ## Resources
 - https://paperswithcode.com/dataset/minecraft-house
 - https://www.computer.org/csdl/proceedings-article/iccv/2019/480300b764/1hVleI3lT4A
