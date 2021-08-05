@@ -161,14 +161,14 @@ public class StructureDataNDArray {
 	 * @param data
 	 */
 	public static byte[][][][] convertToUsable(INDArray data) {
-		INDArray maxed = data.argMax(1);
+		INDArray maxed = data.argMax(3);
 		System.out.println(Arrays.toString(maxed.shape()));
-		System.out.println(maxed);
+		// System.out.println(maxed);
 		byte[][][][] use = createArrayWithCorrectDimensions();
-		for (int x = 0; x < maxed.shape()[1]; x++) {
-			for (int y = 0; y < maxed.shape()[2]; y++) {
-				for (int z = 0; z < maxed.shape()[3]; z++) {
-					use[x][y][z][maxed.getInt(0, x, y, z)] = 1;
+		for (int x = 0; x < maxed.shape()[0]; x++) {
+			for (int y = 0; y < maxed.shape()[1]; y++) {
+				for (int z = 0; z < maxed.shape()[2]; z++) {
+					use[x][y][z][maxed.getInt(x, y, z)] = 1;
 				}
 			}
 		}

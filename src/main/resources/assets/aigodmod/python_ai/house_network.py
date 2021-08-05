@@ -33,7 +33,7 @@ outputfile = open(settingspath + "pythonprogramoutput.txt", mode='w')
 
 BUFFER_SIZE = 60000
 BATCH_SIZE = 256 # change to match batch size
-CHANNELS = 64
+CHANNELS = 65
 EPOCHS = 50
 noise_dim = 100
 generator_lr = .0001
@@ -69,29 +69,36 @@ def train(dataset, epochs):
 
     print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
 
-  
-
-train_file = open("C:\\Users\\borah\\Desktop\\trainingdataset.txt", 'r')
+convenience_save = None
 training_data = []
-line = train_file.readline()
-count = 1;
-while line != "":
-    training_data.append(eval(line.strip(";\n").strip(";")))
+try:
+    convenience_save = open("C:/Users/borah/Desktop/convenience_pickle.pkl", 'rb')
+    training_data = pickle.load(convenience_save)
+    print("Loaded data from pickle file")
+except:
+    pass
+if not convenience_save:
+    print("Loading data from regular file")
+    train_file = open("C:\\Users\\borah\\Desktop\\trainingdataset.txt", 'r')
     line = train_file.readline()
-    count+=1
-    print(str(count) + " " + line[:10])
+    count = 1;
+    while line != "":
+        training_data.append(eval(line.strip(";\n").strip(";")))
+        line = train_file.readline()
+        count+=1
+        print(str(count) + " " + line[:10])
+        
     
-
-convenience_save = open("C:/Users/borah/Desktop/convenience_pickle.pkl", 'wb')
-pickle._dump(training_data, convenience_save)
-convenience_save.close()
+    convenience_save = open("C:/Users/borah/Desktop/convenience_pickle.pkl", 'wb')
+    pickle._dump(training_data, convenience_save)
+    convenience_save.close()
+    train_file.close()
 
 print("file loaded")
 training_data_ndarray = np.array(training_data)
 
 # f = open("C:/Users/borah/Desktop/out.txt", 'w')
 print(training_data_ndarray.shape)
-train_file.close()
 # f.close()
 
 
@@ -101,7 +108,7 @@ def make_discriminator_model():
 
     model = tf.keras.Sequential()
 
-    model.add(layers.Conv3D(64, (5, 5, 5), strides=(2, 2, 2), padding='same',
+    model.add(layers.Conv3D(CHANNELS, (5, 5, 5), strides=(2, 2, 2), padding='same',
                                      input_shape=inputshape))
     #TODO: Fill in input_shape above
     
@@ -109,7 +116,7 @@ def make_discriminator_model():
     #TODO: Add dropout here
     model.add(layers.Dropout(0.3))
 
-    model.add(layers.Conv3D(128, (5, 5, 5), strides=(2, 2, 2), padding='same'))
+    model.add(layers.Conv3D(CHANNELS*2, (5, 5, 5), strides=(2, 2, 2), padding='same'))
     model.add(layers.LeakyReLU())
     #TODO: Add dropout here
     model.add(layers.Dropout(0.3))
@@ -122,26 +129,26 @@ def make_discriminator_model():
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(5*5*5*256, use_bias=False, input_shape=(noise_dim,)))
+    model.add(layers.Dense(5*5*5*CHANNELS*4, use_bias=False, input_shape=(noise_dim,)))
     #model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((5, 5, 5, 256)))
-    assert model.output_shape == (None, 5, 5, 5, 256) 
+    model.add(layers.Reshape((5, 5, 5, CHANNELS*4)))
+    assert model.output_shape == (None, 5, 5, 5, CHANNELS*4) 
     # The assert line shows the expected output shape at this stage. None is the batch size
 
-    model.add(layers.Conv3DTranspose(128, (5, 5, 5), strides=(1, 1, 1), padding='same', use_bias=False))
-    assert model.output_shape == (None, 5, 5, 5, 128)
+    model.add(layers.Conv3DTranspose(CHANNELS*2, (5, 5, 5), strides=(1, 1, 1), padding='same', use_bias=False))
+    assert model.output_shape == (None, 5, 5, 5, CHANNELS*2)
     #model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Conv3DTranspose(64, (5, 5, 5), strides=(3, 3, 3), padding='same', use_bias=False))
-    assert model.output_shape == (None, 15, 15, 15, 64)
+    model.add(layers.Conv3DTranspose(CHANNELS, (5, 5, 5), strides=(3, 3, 3), padding='same', use_bias=False))
+    assert model.output_shape == (None, 15, 15, 15, CHANNELS)
     #model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Conv3DTranspose(64, (5, 5, 5), strides=(2, 2, 2), padding='same', use_bias=False, activation='tanh'))
-    assert model.output_shape == (None, 30, 30, 30, 64) #What is the desired output size for the whole generator? 
+    model.add(layers.Conv3DTranspose(CHANNELS, (5, 5, 5), strides=(2, 2, 2), padding='same', use_bias=False, activation='tanh'))
+    assert model.output_shape == (None, 30, 30, 30, CHANNELS) #What is the desired output size for the whole generator? 
 
     model.add(layers.ReLU())
     

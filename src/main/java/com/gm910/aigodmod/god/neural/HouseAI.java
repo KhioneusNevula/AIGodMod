@@ -18,7 +18,6 @@ import org.deeplearning4j.nn.conf.layers.Deconvolution3D;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.DropoutLayer;
 import org.deeplearning4j.nn.conf.preprocessor.FeedForwardToCnn3DPreProcessor;
-import org.deeplearning4j.nn.modelimport.keras.KerasLayer;
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
@@ -146,7 +145,8 @@ public class HouseAI {
 	public static MultiLayerNetwork importKerasModel(InputStream fileStream)
 			throws IOException, InvalidKerasConfigurationException, UnsupportedKerasConfigurationException {
 
-		KerasLayer.registerCustomLayer("Conv3DTranspose", Deconvolution3DKerasLayer.class);
+		// KerasLayer.registerCustomLayer("Conv3DTranspose",
+		// Deconvolution3DKerasLayer.class);
 		return KerasModelImport.importKerasSequentialModelAndWeights(fileStream);
 
 	}

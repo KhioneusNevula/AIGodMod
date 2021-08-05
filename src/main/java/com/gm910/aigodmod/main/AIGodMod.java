@@ -1,14 +1,15 @@
 package com.gm910.aigodmod.main;
 
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.deeplearning4j.nn.api.Layer.TrainingMode;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.rng.DefaultRandom;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import com.gm910.aigodmod.god.neural.StructureDataNDArray;
 import com.gm910.aigodmod.util.GMUtils;
@@ -59,7 +60,6 @@ public class AIGodMod {
 	private void setup(final FMLCommonSetupEvent event) {
 		// some preinit code
 		LOGGER.info("HELLO FROM PREINIT");
-		ResourceLocation pythonLoc = new ResourceLocation(Reference.MODID, "house_network.py");
 		/*
 		 * Properties props = new Properties();
 		 * 
@@ -84,17 +84,18 @@ public class AIGodMod {
 		byte[][][][] datar = test.getDataArray();
 		System.out.println("Data shape: " + Arrays.toString(StructureDataNDArray.getDimensionsOf(datar)));
 
-		StructureDataNDArray.writeAllHousesToJavaOutput();
+		// StructureDataNDArray.writeAllHousesToJavaOutput();
 
 		// network = (new HouseAI()).buildGeneratorModel();
+
 		/*
 		 * ResourceLocation modeLoc = new ResourceLocation(Reference.MODID,
 		 * "python_ai/gen_model.h5"); try (InputStream modelStream =
 		 * GMUtils.getAssetStream(AIGodMod.class, modeLoc)) { network =
 		 * HouseAI.importKerasModel(modelStream); } catch (IOException |
 		 * InvalidKerasConfigurationException | UnsupportedKerasConfigurationException
-		 * e) { throw new RuntimeException("Issues importing keras model at " +
-		 * modeLoc); } System.out.println(network.summary());
+		 * e) { throw new RuntimeException("Issues importing keras model at " + modeLoc,
+		 * e); } System.out.println(network.summary());
 		 */
 
 	}
@@ -139,23 +140,33 @@ public class AIGodMod {
 			return;
 		if (event.getEntity().tickCount % 200 != 0)
 			return;
+		/*
+		 * try (org.nd4j.linalg.api.rng.Random rand1 = (new DefaultRandom())) { INDArray
+		 * inp = rand1.nextDouble(new int[] { 1, 100 }); System.out.println(inp);
+		 * network.setInput(inp); INDArray out = network.activate(TrainingMode.TEST);
+		 * System.out.println(Arrays.toString(out.shape()));
+		 * System.out.println(StructureDataNDArray.getDimensionsOf(test.getDataArray()))
+		 * ;
+		 * 
+		 * } catch (Exception e) { throw new
+		 * RuntimeException("Issues building keras model", e); }
+		 */
 
-		if (true)
-			return;
-
-		try (org.nd4j.linalg.api.rng.Random rand1 = (new DefaultRandom())) {
-			INDArray inp = rand1.nextDouble(new int[] { 1, 100 });
-			System.out.println(inp);
-			network.setInput(inp);
-			INDArray out = network.activate(TrainingMode.TEST);
-			System.out.println(Arrays.toString(out.shape()));
-			test = new StructureDataNDArray();
-			test.init(StructureDataNDArray.convertToUsable(out));
-			System.out.println(StructureDataNDArray.getDimensionsOf(test.getDataArray()));
-
+		ResourceLocation pythonLoc = new ResourceLocation(Reference.MODID, "python_ai/ndarrayoutput.npy");
+		INDArray out = null;
+		try (InputStream stream1 = GMUtils.getAssetStream(getClass(), pythonLoc)) {
+			out = Nd4j.createNpyFromInputStream(stream1);
 		} catch (Exception e) {
-			throw new RuntimeException("Issues building keras model", e);
+			throw new RuntimeException(e);
 		}
+
+		int i = Nd4j.getRandom().nextInt((int) out.shape()[0]);
+		INDArray toTest = out.get(NDArrayIndex.point(i));
+		System.out.println(Arrays.toString(toTest.shape()));
+
+		test = new StructureDataNDArray();
+		test.init(StructureDataNDArray.convertToUsable(toTest));
+		System.out.println(StructureDataNDArray.getDimensionsOf(test.getDataArray()));
 
 		ServerWorld world = (ServerWorld) event.getEntity().level;
 		test.placeInWorld(world, world.getRandomPlayer().blockPosition().above(10));
